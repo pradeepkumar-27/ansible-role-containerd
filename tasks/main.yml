@@ -1,0 +1,70 @@
+---
+# tasks file for containerd
+- name: specify kernel modules
+  copy:
+    dest: /etc/modules-load.d/containerd.conf
+    content: |
+      {% for module in containerd_kernel_modules %}
+      {{ module }}
+      {% endfor %}
+- name: load containerd kernel modules
+  modprobe:
+    name: "{{ item }}"
+  loop: "{{ containerd_kernel_modules }}"
+- name: include RedHat specific tasks
+  include_tasks: RedHat.yml
+  when: ansible_distribution == "RedHat"
+- name: yum update
+  yum:
+    name: "*"
+    state: latest
+- name: install containerd
+  package:
+    name: containerd
+    state: present
+- name: start and enable containerd at boot
+  service:
+    name: containerd
+    state: started
+    enabled: true
+- name: ensure containerd config directory exists
+  file:
+    path: /etc/containerd
+    state: directory
+  register: containerd_dir
+- name: get default config from containerd
+  command: "containerd config default"
+  register: containerd_config_default
+- name: prepare containerd/config.toml from default config
+  copy:
+    dest: /tmp/containerd_config.toml
+    content: "{{ containerd_config_default.stdout }}"
+- name: set cgroup driver to systemd
+  lineinfile:
+    insertafter: '.*\[plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc.options\]$'
+    line: '          SystemdCgroup = true'
+    state: present
+    path: /tmp/containerd_config.toml
+  when: containerd_config_cgroup_driver_systemd
+  changed_when: false
+- name: make sure SystemdCgroup = false is not set
+  lineinfile:
+    path: /tmp/containerd_config.toml
+    state: absent
+    line: '            SystemdCgroup = false'
+  when: containerd_config_cgroup_driver_systemd
+  changed_when: false
+- name: copy /tmp/containerd_config.toml to /etc/containerd/config.toml
+  copy:
+    remote_src: true
+    src: /tmp/containerd_config.toml
+    dest: /etc/containerd/config.toml
+  when: containerd_config_cgroup_driver_systemd
+  notify: restart containerd
+- name: cleanup /tmp/containerd_config.toml
+  file:
+    dest: /tmp/containerd_config.toml
+    state: absent
+  changed_when: false
+- name: ensure containerd is restarted immediately if necessary
+  meta: flush_handlers

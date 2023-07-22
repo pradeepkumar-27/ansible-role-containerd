@@ -1,0 +1,13 @@
+---
+# RedHat specific configurations for containerd
+- name: add docker gpg key
+  rpm_key:
+    key: "{{ docker_yum_gpg_key }}"
+    state: present
+- name: setup docker repository
+  get_url:
+    url: "{{ docker_yum_repo_url }}"
+    dest: /etc/yum.repos.d/docker-ce.repo
+    owner: root
+    group: root
+    mode: 0644

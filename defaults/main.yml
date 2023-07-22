@@ -1,0 +1,11 @@
+---
+# defaults file for containerd
+
+containerd_kernel_modules:
+- overlay
+- br_netfilter
+
+docker_yum_gpg_key: https://download.docker.com/linux/centos/gpg
+docker_yum_repo_url: https://download.docker.com/linux/centos/docker-ce.repo
+
+containerd_config_cgroup_driver_systemd: true
