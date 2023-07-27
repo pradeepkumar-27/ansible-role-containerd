@@ -21,9 +21,10 @@ None
 Example Playbook
 ----------------
 
-    - hosts: servers
+    - name: install containerd
+      hosts: servers
       roles:
-      - pradeepkumar.27.containerd
+      - pradeepkumar027.containerd
 
 License
 -------
